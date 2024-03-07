@@ -8,7 +8,6 @@ A decentralized application built with nextjs for the polkadot blockchain mirror
 Inspired by the Encode x Polkadot Hackathon: Front-end Development Basics & Backend Authentication for Polkadot
 
 ##  Prerequisites
-- Python
 - Node Js
 - npm/yarn
 
