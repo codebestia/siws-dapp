@@ -1,95 +1,169 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client"
+import { useState } from 'react'
+import './page.css'
+import { web3Accounts, web3Enable, web3FromAddress, web3FromSource } from '@polkadot/extension-dapp'
+import { ApiPromise, WsProvider } from '@polkadot/api'
+import { SiwsMessage } from "@talismn/siws"
+import { message, Input } from 'antd';
 
-export default function Home() {
+
+function App() {
+  const [activeExtension, setActiveExtension] = useState(null);
+  const [accountConnected, setAccountConnected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [transactionLoading, setTransactionLoading] = useState(false);
+  const [signedIn, setSignIn] = useState(false);
+  const [jwtToken, setJwtToken] = useState(null);
+  const [amountToBurn, setAmountToBurn] = useState(0);
+
+  const truncateMiddle = (address)=>{
+    let midPoint = parseInt(address.length / 2)
+    return address.slice(0, midPoint- 10) +"........"+ address.slice(midPoint+10, address.length)
+  }
+
+  const connectExtension = async()=>{
+
+    setLoading(true)
+    let activeExtension = await web3Enable("Codebestia Encode Hackathon");
+    setActiveExtension(activeExtension);
+    // console.log(activeExtension)
+
+    let accounts = null;
+    activeExtension? accounts = await web3Accounts() : message.error("No Account Found");
+    setAccountConnected(accounts);
+    setLoading(false);
+
+    message.success("Account Connected");
+  }
+  const initTransaction = async ()=>{
+    if(parseInt(amountToBurn) <= 0){
+      message.error("Enter an amount greater than zero")
+      return
+    }
+    setTransactionLoading(true)
+    const wsProvider = new WsProvider("wss://westend-rpc.polkadot.io");
+    const api = await ApiPromise.create({provider: wsProvider});
+
+    const injector = await web3FromAddress(accountConnected[0].address);
+
+    const tx = api.tx.balances.transferKeepAlive('5GbKMhCgYSVLRy62ZXFZuySSuLQcK7SstXbf9EvZpebkndGZ',parseFloat(amountToBurn));
+    
+    tx.signAndSend(accountConnected[0].address,{signer: injector.signer},({status})=>{
+      if(status.isInBlock){
+        console.log(`Completed transaction at block hash ${status.asInBlock.toString()}`);
+        message.success(`Completed transaction at block hash ${status.asInBlock.toString()}`);
+      }else{
+        console.log(`Current Status: ${status.type}`);
+        message.info(`Current Status: ${status.type}`);
+      }
+      setTransactionLoading(false)
+    }).catch((error)=>{
+      console.log(`:( transaction failed`,error);
+      message.error(`:( transaction failed: `+ error);
+      setTransactionLoading(false)
+    })
+  }
+  const handleSignIn = async () => {
+    setLoading(true)
+    const nonceRes = await fetch("api/getnonce")
+    const data = await nonceRes.json()
+    const {nonce} = data
+    const siws = new SiwsMessage({
+      domain: "localhost",
+      uri: "http://localhost:5173",
+      address: accountConnected[0].address,
+      nonce, 
+      statement: "Welcome to my SIWS workshop application",
+      chainName: "Polkadot",
+    })
+    try{
+      const injectedExtension = await web3FromSource(accountConnected[0].meta.source)
+      const signed = await siws.sign(injectedExtension)
+      const verifyRes = await fetch("/api/verify", {
+        method: "POST",
+        body: JSON.stringify({ ...signed, address: accountConnected[0].address }),
+      })
+      const verified = await verifyRes.json()
+      if (verified.error) throw new Error(verified.error)
+      message.success("Sign In Successful")
+      setSignIn(true)
+      setJwtToken(verified.jwtToken)
+    }catch(e){
+      message.error("Sign Failed: " + e)
+    }
+    setLoading(false)
+  
+    
+  }
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <>
+     <div className='nav'>
+      <div>
+        <p className='nav-brand'>Encode SIWS Workshop</p>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+      <div>
+        {!accountConnected?(
+        <button className='btn' onClick={connectExtension} disabled={loading} >
+          {
+            loading?("Connecting"):("Connect")
+          }
+        </button>
+        ):(
+          <button className='btn btn-danger' onClick={()=>setAccountConnected(null)}>
+            Disconnect
+          </button>
+        )}
+        
+      </div> 
+     </div>
+     <div className='content'>
+          {!accountConnected?(
+            <div className='page-center-cover'>
+              <h2>Connect Wallet to Use application</h2>
+                <button className='btn' onClick={connectExtension} disabled={loading} >
+                  {
+                    loading?("Connecting"):("Connect")
+                  }
+                </button>
+            </div>
+          ):(
+            <>
+            {!signedIn?(
+              <div className='box'>
+                <h2 style={{textAlign:"center", marginTop:10, marginBottom: 10}}>Sign In with Substrate</h2>
+                <div className='card'>
+                  <h3 className='header'>Selected Account</h3>
+                  <p className='body'>{truncateMiddle(accountConnected[0].address)}</p>
+                </div>
+                <button onClick={handleSignIn} disabled={loading} className='btn btn-block'>
+                  {
+                    loading? ("Signing in..."):("SignIn")
+                  }
+                </button>
+              </div>
+            ):(
+              <div className='box'>
+              <h3 className='text-bold'>Selected Extension: {activeExtension[0].name}</h3>
+              <p style={{marginTop: 10, marginBottom: 10 , color:"gray"}}>Account: {truncateMiddle(accountConnected[0].address)} </p>
+              <p>Enter WND Amount to Burn</p>
+              <Input value={amountToBurn} 
+              onChange={(e)=>setAmountToBurn(e.target.value)} 
+              type='number'  
+              style={{background:"transparent",color:"white"}}
+              placeholder='Enter WND Amount to burn' />
+            <button className='btn' style={{marginTop: 10}} onClick={initTransaction} disabled={transactionLoading}>
+            {
+              transactionLoading?(`Burning...`):("Burn WND")
+            }
+            </button>
+            </div>
+            )}
+            </>
+            
+          )}
+     </div>
+    </>
+  )
 }
+
+export default App
