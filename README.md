@@ -59,7 +59,7 @@ To run this project, you will need to add the following environment variables to
 
 ![Landing Page](https://res.cloudinary.com/ds81lsf2c/image/upload/v1709846952/dapp1_tqblao.jpg)
 
-![Sign Page](https://res.cloudinary.com/ds81lsf2c/image/upload/v1709846952/dapp2_rbuue5.jpg)
+![SignIn Page](https://res.cloudinary.com/ds81lsf2c/image/upload/v1709846952/dapp2_rbuue5.jpg)
 
 ![Burn Page](https://res.cloudinary.com/ds81lsf2c/image/upload/v1709846952/dapp3_lmtdsh.jpg)
 
