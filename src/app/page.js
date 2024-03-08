@@ -24,16 +24,27 @@ function App() {
   const connectExtension = async()=>{
 
     setLoading(true)
-    let activeExtension = await web3Enable("Codebestia Encode Hackathon");
-    setActiveExtension(activeExtension);
-    // console.log(activeExtension)
+    try{
+      let activeExtension = await web3Enable("Codebestia Encode Hackathon");
+        setActiveExtension(activeExtension);
+        console.log(activeExtension)
 
-    let accounts = null;
-    activeExtension? accounts = await web3Accounts() : message.error("No Account Found");
-    setAccountConnected(accounts);
+        let accounts = null;
+        if(activeExtension && activeExtension.length > 0){
+          accounts = await web3Accounts()
+        }else{
+          message.error("No Account Found");
+          throw new Error("No Account Found")
+        }
+        setAccountConnected(accounts);
+        message.success("Account Connected");
+    }catch(e){
+      console.log(e)
+      message.error("Connection Error: "+e)
+    }
     setLoading(false);
 
-    message.success("Account Connected");
+    
   }
   const initTransaction = async ()=>{
     if(parseInt(amountToBurn) <= 0){
